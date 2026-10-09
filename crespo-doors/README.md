@@ -20,11 +20,12 @@ This outputs a single portable file at `dist/index.html` (JS, CSS, and images ar
 ## The door intro
 
 The page opens with a scroll-driven 3D assembly (`src/components/Hero.jsx` + `src/components/intro/`):
-a laser survey, then the frame, hinges, slab, lockset and weatherstrip fly in and get screwed down,
-the door swings open and the camera pushes through into a scroll-scrubbed showroom walkthrough.
+a laser survey, then a walnut double door is built piece by piece — frame, stiles & rails on hinges,
+glass, diagonal chevron slats, mortise locksets with black levers and a 3-point lock — then both leaves
+swing open and the camera pushes through into a scroll-scrubbed showroom walkthrough.
 
 - `intro/timeline.js` – every scroll range, screw and camera keyframe in one place (tweak timing here)
-- `intro/DoorScene.jsx` – the CSS-3D door parts
+- `intro/DoorScene.jsx` – the CSS-3D door parts (geometry constants live in `timeline.js`)
 - `public/intro/` – showroom still + walkthrough video (kept out of the single-file bundle).
   Encoded with a short GOP (`-g 3 -bf 0`) so scrubbing stays smooth.
 - Visitors with "reduce motion" enabled get the finished scene without the animation.

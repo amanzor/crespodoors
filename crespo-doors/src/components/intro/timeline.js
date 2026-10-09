@@ -1,6 +1,6 @@
 // Scroll timeline for the door-assembly intro.
 // Every value below is a fraction of the intro's total scroll distance (0 → 1).
-// Geometry is in "units" (u): the door frame is 100u wide × 220u tall.
+// Geometry is in "units" (u): the double-door frame is 150u wide × 201u tall.
 
 export const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v)
 export const progress = (v, [a, b]) => clamp01((v - a) / (b - a))
@@ -19,15 +19,36 @@ export const ease = {
   },
 }
 
+// ── Geometry ────────────────────────────────────────────────────────────────
+export const FRAME = { w: 150, h: 201 }
+// clear opening inside the frame
+export const OPENING = { x0: 7, y0: 7, x1: 143, y1: 196 }
+// door leaves (scene coords)
+export const LEAF = { w: 67.5, h: 188.4, y: 7.3, leftX: 7.3, rightX: 75.2 }
+// leaf-local layout
+export const STILE = 9
+export const RAIL = { top: [0, 9], mid: [103, 109], bottom: [162, 188.4] }
+export const SECTIONS = {
+  upper: { x: STILE, y: 9, w: LEAF.w - 2 * STILE, h: 94 },
+  lower: { x: STILE, y: 109, w: LEAF.w - 2 * STILE, h: 53 },
+}
+// hardware on the meeting stile (leaf-local, left leaf; mirrored for the right)
+export const PLATE = { x: 60.75, y: 95, w: 4.5, h: 23 }
+export const LEVER_Y = 111
+
+export const END_FOCUS = [75, 101.5]
+
 export const STEPS = [
-  { at: 0.0, n: '00', label: 'Survey', title: 'Every great door starts with a measurement.', spec: 'Rough opening 36″ × 96″ · laser-verified on site' },
-  { at: 0.08, n: '01', label: 'Frame', title: 'A frame squared to 1/32″.', spec: 'Kiln-dried jambs · #10 structural screws into the stud' },
-  { at: 0.22, n: '02', label: 'Hinges', title: 'Hung on ball-bearing hinges.', spec: '3 × 4½″ hinges · 3″ screws, never just the trim' },
-  { at: 0.345, n: '03', label: 'Slab', title: 'A solid-core slab, hand-fitted.', spec: '1¾″ solid core · even ⅛″ reveal all the way around' },
-  { at: 0.46, n: '04', label: 'Lockset', title: 'Hardware that locks like it means it.', spec: 'Grade 1 deadbolt · reinforced strike plate' },
-  { at: 0.585, n: '05', label: 'Seal', title: 'Sealed tight. Not one draft gets through.', spec: 'Compression weatherstrip · U-factor 0.27' },
-  { at: 0.68, n: '06', label: 'Welcome', title: 'Now — step inside.', spec: 'Sold · Engineered · Installed · Delivered' },
+  { at: 0.0, n: '00', label: 'Survey', title: 'Every great entrance starts with a measurement.', spec: 'Rough opening 72″ × 96″ · double door, laser-verified on site' },
+  { at: 0.07, n: '01', label: 'Frame', title: 'A solid walnut frame, squared to 1/32″.', spec: 'Kiln-dried jambs · #10 structural screws into the stud' },
+  { at: 0.2, n: '02', label: 'Stiles & rails', title: 'Hand-joined stiles and rails, hung on steel hinges.', spec: 'Mortise-and-tenon joinery · 6 ball-bearing hinges' },
+  { at: 0.35, n: '03', label: 'Glass', title: 'Insulated low-E glass, set in place.', spec: 'Dual-pane · argon-filled · tempered for safety' },
+  { at: 0.445, n: '04', label: 'Slats', title: 'Solid walnut slats, cut on the diagonal.', spec: '45° chevron pattern · book-matched grain' },
+  { at: 0.565, n: '05', label: 'Hardware', title: 'Engineered hardware, built to be touched every day.', spec: 'Mortise locksets · matte-black levers · Grade 1 rated' },
+  { at: 0.695, n: '06', label: 'Lock & seal', title: 'Locked at three points. Sealed all the way around.', spec: 'Multipoint lock · compression weatherstrip · U-factor 0.27' },
+  { at: 0.76, n: '07', label: 'Welcome', title: 'Now — step inside.', spec: 'Sold · Engineered · Installed · Delivered' },
 ]
+export const LAST_STEP = STEPS[STEPS.length - 1].n
 
 export const stepAt = (v) => {
   let i = 0
@@ -35,72 +56,84 @@ export const stepAt = (v) => {
   return i
 }
 
-// Part landing windows
+// ── Part landing windows ────────────────────────────────────────────────────
 export const T = {
-  survey: [0.0, 0.07],
-  surveyOut: [0.12, 0.17],
-  jambL: [0.08, 0.135],
-  jambR: [0.095, 0.15],
-  head: [0.11, 0.165],
-  sill: [0.12, 0.165],
-  hinges: [[0.222, 0.252], [0.229, 0.259], [0.236, 0.266]],
-  slab: [0.36, 0.445],
-  leakIn: [0.44, 0.47],
-  plate: [0.47, 0.505],
-  strike: [0.475, 0.51],
-  deadbolt: [0.49, 0.52],
-  lever: [0.5, 0.535],
-  seal: [0.592, 0.65],
-  thumbTurn: [0.684, 0.7],
-  leverPress: [0.69, 0.715],
-  swing: [0.715, 0.86],
-  slabOut: [0.812, 0.852],
-  spill: [0.72, 0.8],
-  spillOut: [0.86, 0.9],
-  video: [0.715, 1.0],
-  hudOut: [0.7, 0.76],
-  gridOut: [0.76, 0.88],
-  hero: [0.915, 0.985],
+  survey: [0.0, 0.065],
+  surveyOut: [0.11, 0.16],
+  jambL: [0.07, 0.12],
+  jambR: [0.08, 0.13],
+  head: [0.095, 0.145],
+  sill: [0.105, 0.145],
+  stiles: [[0.2, 0.235], [0.207, 0.242]],
+  rails: [[0.222, 0.255], [0.229, 0.262], [0.236, 0.269]],
+  hinges: [0.262, 0.29],
+  glass: [[0.36, 0.4], [0.368, 0.408], [0.376, 0.416], [0.384, 0.424]],
+  glassSweep: [0.405, 0.47],
+  slats: [0.452, 0.555],
+  leakIn: [0.47, 0.5],
+  plates: [0.574, 0.6],
+  levers: [0.624, 0.655],
+  seal: [0.7, 0.745],
+  boltsOut: [0.735, 0.755],
+  thumbTurn: [0.758, 0.77],
+  leverPress: [0.765, 0.785],
+  boltsIn: [0.77, 0.785],
+  swing: [0.785, 0.9],
+  slabOut: [0.855, 0.89],
+  spill: [0.79, 0.85],
+  spillOut: [0.9, 0.93],
+  video: [0.785, 1.0],
+  hudOut: [0.8, 0.86],
+  gridOut: [0.82, 0.92],
+  hero: [0.935, 0.99],
 }
 
-// Screws. `face: 'strike'` screws live on the right jamb's inner face (local coords).
-const hingeYs = [72, 132, 192]
+// ── Screws ──────────────────────────────────────────────────────────────────
+// `leaf` screws live on a door leaf (leaf-local coords) so they swing with it.
+const HINGE_YS = [38, 101.5, 165]
+export const HINGES = HINGE_YS
 export const SCREWS = [
-  { id: 'f1', x: 4, y: 62, at: [0.165, 0.185] },
-  { id: 'f2', x: 96, y: 62, at: [0.172, 0.192] },
-  { id: 'f3', x: 4, y: 206, at: [0.179, 0.199] },
-  { id: 'f4', x: 96, y: 206, at: [0.186, 0.206] },
-  { id: 'f5', x: 17.5, y: 17.5, at: [0.193, 0.213] },
-  { id: 'f6', x: 82.5, y: 17.5, at: [0.2, 0.22] },
-  ...hingeYs.flatMap((y, i) => [
-    { id: `h${i}a`, x: 6.2, y: y - 4.2, r: 1.05, at: [0.255 + i * 0.023, 0.273 + i * 0.023] },
-    { id: `h${i}b`, x: 6.2, y: y + 4.2, r: 1.05, at: [0.2665 + i * 0.023, 0.2845 + i * 0.023] },
-  ]),
-  { id: 's1', face: 'strike', x: 6, y: 76, r: 0.95, at: [0.535, 0.552] },
-  { id: 's2', face: 'strike', x: 6, y: 84, r: 0.95, at: [0.545, 0.562] },
-  { id: 'l1', door: true, x: 83, y: 106.6, r: 0.9, at: [0.555, 0.572] },
-  { id: 'l2', door: true, x: 83, y: 133.4, r: 0.9, at: [0.565, 0.582] },
+  { id: 'f1', x: 3.5, y: 22, at: [0.15, 0.17] },
+  { id: 'f2', x: 146.5, y: 22, at: [0.157, 0.177] },
+  { id: 'f3', x: 3.5, y: 182, at: [0.164, 0.184] },
+  { id: 'f4', x: 146.5, y: 182, at: [0.171, 0.191] },
+  { id: 'f5', x: 40, y: 3.5, at: [0.178, 0.198] },
+  { id: 'f6', x: 110, y: 3.5, at: [0.185, 0.205] },
+  ...HINGE_YS.flatMap((y, i) => {
+    const a = 0.29 + i * 0.017
+    return [
+      { id: `hl${i}a`, x: 5.2, y: y - 4.2, r: 0.95, dark: true, at: [a, a + 0.016] },
+      { id: `hr${i}a`, x: 144.8, y: y - 4.2, r: 0.95, dark: true, at: [a + 0.002, a + 0.018] },
+      { id: `hl${i}b`, x: 5.2, y: y + 4.2, r: 0.95, dark: true, at: [a + 0.007, a + 0.023] },
+      { id: `hr${i}b`, x: 144.8, y: y + 4.2, r: 0.95, dark: true, at: [a + 0.009, a + 0.025] },
+    ]
+  }),
+  { id: 'pl1', leaf: 'left', x: PLATE.x + PLATE.w / 2, y: PLATE.y + 2, r: 0.85, dark: true, at: [0.6, 0.617] },
+  { id: 'pr1', leaf: 'right', x: PLATE.x + PLATE.w / 2, y: PLATE.y + 2, r: 0.85, dark: true, at: [0.606, 0.623] },
+  { id: 'pl2', leaf: 'left', x: PLATE.x + PLATE.w / 2, y: PLATE.y + PLATE.h - 2, r: 0.85, dark: true, at: [0.614, 0.631] },
+  { id: 'pr2', leaf: 'right', x: PLATE.x + PLATE.w / 2, y: PLATE.y + PLATE.h - 2, r: 0.85, dark: true, at: [0.62, 0.637] },
 ]
-export const HINGE_YS = hingeYs
 
-// Camera keyframes: [t, focusX, focusY, scale, rotateY, rotateX]
+// ── Camera keyframes: [t, focusX, focusY, scale, rotateY, rotateX] ──────────
 // `END` scale is resolved at runtime so the doorway always overfills the viewport.
 export const END = 'END'
 export const CAMERA = [
-  [0.0, 50, 124, 0.84, -26, 9],
-  [0.08, 50, 122, 1.0, -18, 6],
-  [0.2, 50, 122, 1.0, -14, 5],
-  [0.245, 12, 132, 2.1, -27, 3],
-  [0.33, 12, 128, 2.1, -22, 3],
-  [0.375, 50, 122, 1.0, -10, 4],
-  [0.46, 50, 122, 1.02, -6, 3],
-  [0.505, 80, 122, 2.15, 18, 2],
-  [0.58, 80, 122, 2.15, 13, 2],
-  [0.625, 50, 122, 0.98, 0, 2],
-  [0.69, 50, 121, 1.05, 0, 0],
-  [0.75, 50, 120, 1.35, 0, 0],
-  [0.95, 50, 120, END, 0, 0],
-  [1.0, 50, 120, END, 0, 0],
+  [0.0, 75, 106, 0.84, -24, 9],
+  [0.07, 75, 104, 1.0, -16, 6],
+  [0.2, 75, 104, 1.0, -12, 5],
+  [0.29, 24, 100, 1.85, -26, 3],
+  [0.345, 24, 100, 1.85, -22, 3],
+  [0.39, 75, 104, 1.02, 14, 4],
+  [0.45, 75, 104, 1.0, 9, 3],
+  [0.5, 75, 104, 1.06, -6, 3],
+  [0.56, 75, 104, 1.0, -4, 2],
+  [0.6, 75, 114, 2.4, 9, 1],
+  [0.69, 75, 114, 2.4, 4, 1],
+  [0.73, 75, 103, 0.98, 0, 1],
+  [0.77, 75, 102, 1.04, 0, 0],
+  [0.82, 75, 101.5, 1.3, 0, 0],
+  [0.965, 75, 101.5, END, 0, 0],
+  [1.0, 75, 101.5, END, 0, 0],
 ]
 
 export function cameraAt(v, endScale) {
