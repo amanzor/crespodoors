@@ -6,7 +6,12 @@ export default function MobileCTA() {
   const [show, setShow] = useState(false)
 
   useEffect(() => {
-    const onScroll = () => setShow(window.scrollY > 700)
+    // stay hidden during the door intro; appear once the visitor is inside
+    const onScroll = () => {
+      const home = document.getElementById('home')
+      const threshold = home ? home.offsetTop + home.offsetHeight - window.innerHeight * 0.6 : 700
+      setShow(window.scrollY > threshold)
+    }
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
