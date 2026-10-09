@@ -11,7 +11,7 @@ import {
 import { ArrowRight, PlayCircle, ChevronsDown, FastForward } from 'lucide-react'
 import { easeOut, staggerContainer } from '../lib/motion'
 import DoorScene from './intro/DoorScene'
-import { STEPS, SCREWS, T, cameraAt, progress, stepAt, lerp } from './intro/timeline'
+import { STEPS, SCREWS, T, OPENING, END_FOCUS, LAST_STEP, cameraAt, progress, stepAt, lerp } from './intro/timeline'
 
 const BASE = import.meta.env.BASE_URL
 const POSTER = `${BASE}intro/interior.jpg`
@@ -132,7 +132,7 @@ function useViewport() {
   const read = () => {
     const w = window.innerWidth
     const h = window.innerHeight
-    return { w, h, unit: Math.min(h * 0.0029, w * 0.0072) }
+    return { w, h, unit: Math.min(h * 0.0029, w * 0.0056) }
   }
   const [vp, setVp] = useState(read)
   useEffect(() => {
@@ -150,45 +150,31 @@ function useViewport() {
   return vp
 }
 
-/** Smallest scale at which the arched opening (centred on 50,120) covers the viewport. */
+/** Smallest scale at which the doorway (centred on the end focus) covers the viewport. */
 function coverScale({ w, h, unit }) {
-  const covers = (S) => {
-    const hw = w / (2 * S * unit)
-    const hh = h / (2 * S * unit)
-    if (hw > 42 || 120 + hh > 214) return false
-    const top = 120 - hh
-    if (top < 50) {
-      const dy = 50 - top
-      if (hw * hw + dy * dy > 42 * 42) return false
-    }
-    return true
-  }
-  let lo = 0.5
-  let hi = 60
-  for (let i = 0; i < 40; i++) {
-    const mid = (lo + hi) / 2
-    if (covers(mid)) hi = mid
-    else lo = mid
-  }
-  return hi * 1.04
+  const [fx, fy] = END_FOCUS
+  const halfW = Math.min(fx - OPENING.x0, OPENING.x1 - fx)
+  const halfH = Math.min(fy - OPENING.y0, OPENING.y1 - fy)
+  return Math.max(w / (2 * halfW * unit), h / (2 * halfH * unit)) * 1.04
 }
 
 function Hud({ s, onSkip }) {
-  const [state, setState] = useState({ step: 0, screws: 0, sealed: false })
+  const [state, setState] = useState({ step: 0, screws: 0, sealed: false, locked: false })
   useMotionValueEvent(s, 'change', (v) => {
     const next = {
       step: stepAt(v),
       screws: SCREWS.filter((k) => v >= k.at[1]).length,
       sealed: v >= T.seal[1],
+      locked: v >= T.boltsOut[1] && v < T.boltsIn[0],
     }
-    setState((prev) => (prev.step === next.step && prev.screws === next.screws && prev.sealed === next.sealed ? prev : next))
+    setState((prev) => (prev.step === next.step && prev.screws === next.screws && prev.sealed === next.sealed && prev.locked === next.locked ? prev : next))
   })
-  const opacity = useTransform(s, (v) => 1 - progress(v, [0.76, 0.82]))
+  const opacity = useTransform(s, (v) => 1 - progress(v, T.hudOut))
   const hint = useTransform(s, (v) => 1 - progress(v, [0.005, 0.03]))
   const intro = useTransform(s, (v) => 1 - progress(v, [0.004, 0.035]))
   const introY = useTransform(s, (v) => -60 * progress(v, [0.004, 0.035]))
   const captionIn = useTransform(s, (v) => progress(v, [0.02, 0.045]))
-  const rail = useTransform(s, (v) => progress(v, [0, 0.68]))
+  const rail = useTransform(s, (v) => progress(v, [0, STEPS[STEPS.length - 1].at]))
   const step = STEPS[state.step]
 
   return (
@@ -196,7 +182,7 @@ function Hud({ s, onSkip }) {
       {/* mobile chip */}
       <div className="absolute inset-x-0 top-24 flex justify-center lg:hidden">
         <div className="flex items-center gap-3 rounded-full border border-stone-700/80 bg-stone-950/70 px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-stone-400 backdrop-blur">
-          <span className="text-maroon-300">{step.n}/06</span>
+          <span className="text-maroon-300">{step.n}/{LAST_STEP}</span>
           <span className="text-stone-200">{step.label}</span>
           <span className="h-3 w-px bg-stone-700" />
           <span>Screws {String(state.screws).padStart(2, '0')}/{SCREWS.length}</span>
@@ -234,6 +220,10 @@ function Hud({ s, onSkip }) {
         <div>
           <div>Air seal</div>
           <div className={`mt-1 text-sm ${state.sealed ? 'text-emerald-400' : 'text-maroon-300'}`}>{state.sealed ? 'Sealed · U-0.27' : 'Open'}</div>
+        </div>
+        <div>
+          <div>Lock</div>
+          <div className={`mt-1 text-sm ${state.locked ? 'text-emerald-400' : 'text-stone-300'}`}>{state.locked ? '3-point · engaged' : 'Released'}</div>
         </div>
       </div>
 
@@ -303,20 +293,19 @@ function DoorIntro() {
   const stickyRef = useRef(null)
   const clip = useMotionValue('inset(50%)')
   // The camera is square-on (no rotation) whenever the doorway is open, so the
-  // opening projects to a plain rectangle with a semicircular top.
+  // opening projects to a plain rectangle.
   const toClip = (v) => {
     const el = stickyRef.current
     const W = el ? el.clientWidth : vp.w
     const H = el ? el.clientHeight : vp.h
     const [fx, fy, S] = cameraAt(v, endRef.current)
     const k = vp.unit * S
-    const L = W / 2 + (8 - fx) * k
-    const R = W / 2 + (92 - fx) * k
-    const Tp = H / 2 + (8 - fy) * k
-    const B = H / 2 + (214 - fy) * k
+    const L = W / 2 + (OPENING.x0 - fx) * k
+    const R = W / 2 + (OPENING.x1 - fx) * k
+    const Tp = H / 2 + (OPENING.y0 - fy) * k
+    const B = H / 2 + (OPENING.y1 - fy) * k
     if (S >= cover) return 'none'
-    const r = 42 * k
-    return `inset(${Tp}px ${W - R}px ${H - B}px ${L}px round ${r}px ${r}px 0 0)`
+    return `inset(${Tp}px ${W - R}px ${H - B}px ${L}px)`
   }
   const [heroOn, setHeroOn] = useState(false)
   const seek = useRef({ busy: false, target: 0 })
@@ -346,7 +335,7 @@ function DoorIntro() {
   }
 
   const grid = useTransform(s, (v) => 1 - progress(v, T.gridOut))
-  const bloom = useTransform(s, (v) => (v < 0.86 ? progress(v, [0.78, 0.86]) * 0.5 : lerp(0.5, 0, progress(v, [0.86, 0.96]))))
+  const bloom = useTransform(s, (v) => (v < 0.89 ? progress(v, [0.83, 0.89]) * 0.5 : lerp(0.5, 0, progress(v, [0.89, 0.97]))))
   const shade = useTransform(s, (v) => progress(v, T.hero))
 
   const skip = () => {
@@ -357,7 +346,7 @@ function DoorIntro() {
 
   const interior = useTransform(s, (v) => progress(v, [T.swing[0], T.swing[0] + 0.008]))
   const videoScale = useTransform(s, (v) => 1.12 - 0.12 * progress(v, [T.swing[0], 1]))
-  const glare = useTransform(s, (v) => (v < 0.74 ? progress(v, [0.715, 0.74]) * 0.9 : lerp(0.9, 0, progress(v, [0.74, 0.9]))))
+  const glare = useTransform(s, (v) => (v < 0.81 ? progress(v, [T.swing[0], 0.81]) * 0.9 : lerp(0.9, 0, progress(v, [0.81, 0.94]))))
   const small = vp.w < 900
   const video = (
     <motion.video
@@ -375,7 +364,7 @@ function DoorIntro() {
   )
 
   return (
-    <section id="home" ref={sectionRef} className="relative bg-stone-950" style={{ height: small ? '620vh' : '720vh' }}>
+    <section id="home" ref={sectionRef} className="relative bg-stone-950" style={{ height: small ? '700vh' : '820vh' }}>
       <div ref={stickyRef} className="sticky top-0 h-[100svh] overflow-hidden">
         {/* backdrop */}
         <motion.div style={{ opacity: grid }} className="absolute inset-0">
